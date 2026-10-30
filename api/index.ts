@@ -41,9 +41,20 @@ export const createServer = async (expressInstance: express.Express) => {
   await app.init();
 };
 
-export default async function handler(req: Request, res: Response) {
-  if (!server.listeners('request').length) {
-    await createServer(server);
+let isReady = false;
+let initPromise: Promise<void> | null = null;
+
+const ensureServer = async () => {
+  if (isReady) return;
+  if (!initPromise) {
+    initPromise = createServer(server).then(() => {
+      isReady = true;
+    });
   }
+  await initPromise;
+};
+
+export default async function handler(req: Request, res: Response) {
+  await ensureServer();
   return server(req, res);
 }
