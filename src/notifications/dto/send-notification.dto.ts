@@ -8,7 +8,7 @@ export class SendNotificationDto {
   })
   @IsString()
   @IsNotEmpty()
-  title: string;
+  title!: string;
 
   @ApiProperty({
     example: 'Shipment #14 has been recorded.',
@@ -16,7 +16,7 @@ export class SendNotificationDto {
   })
   @IsString()
   @IsNotEmpty()
-  body: string;
+  body!: string;
 
   @ApiPropertyOptional({
     example: 'testuser',
