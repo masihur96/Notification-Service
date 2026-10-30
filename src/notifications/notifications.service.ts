@@ -3,13 +3,19 @@ import {
   OnModuleInit,
   InternalServerErrorException,
 } from '@nestjs/common';
-import * as admin from 'firebase-admin';
+import {
+  getApps,
+  initializeApp,
+  cert,
+  ServiceAccount,
+} from 'firebase-admin/app';
+import { getMessaging, Message } from 'firebase-admin/messaging';
 import { SendNotificationDto } from './dto/send-notification.dto';
 
 @Injectable()
 export class NotificationsService implements OnModuleInit {
   onModuleInit() {
-    if (!admin.apps.length) {
+    if (!getApps().length) {
       const serviceAccountRaw = process.env.FIREBASE_SERVICE_ACCOUNT;
       if (!serviceAccountRaw) {
         console.warn(
@@ -18,9 +24,9 @@ export class NotificationsService implements OnModuleInit {
         return;
       }
 
-      const serviceAccount = JSON.parse(serviceAccountRaw);
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
+      const serviceAccount = JSON.parse(serviceAccountRaw) as ServiceAccount;
+      initializeApp({
+        credential: cert(serviceAccount),
       });
     }
   }
@@ -28,7 +34,7 @@ export class NotificationsService implements OnModuleInit {
   async sendPush(dto: SendNotificationDto) {
     const { title, body, topic, token, data } = dto;
 
-    const message: admin.messaging.Message = {
+    const message: Message = {
       notification: { title, body },
       data: {
         click_action: 'FLUTTER_NOTIFICATION_CLICK',
@@ -48,10 +54,12 @@ export class NotificationsService implements OnModuleInit {
     };
 
     try {
-      const response = await admin.messaging().send(message);
+      const response = await getMessaging().send(message);
       return { success: true, messageId: response };
-    } catch (error) {
-      throw new InternalServerErrorException(error.message);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      throw new InternalServerErrorException(errorMessage);
     }
   }
 }
